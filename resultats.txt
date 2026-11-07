@@ -1,0 +1,87 @@
+DEVOIR SVM - AUTO MPG
+===============================================================
+Donnees : 392 voitures (6 lignes incompletes retirees).
+Separation : 313 pour entrainement, 79 pour test.
+Pretraitement : standardisation des 5 variables numeriques et
+encodage one-hot des cylindres et de l'origine ; nom exclu.
+Les transformations sont ajustees uniquement sur l'entrainement.
+
+1. CLASSIFICATION SVC
+---------------------------------------------------------------
+Seuils des terciles calcules sur train : 18.50 et 27.00 mpg.
+Consommation elevee : mpg <= seuil 1 ; moyenne : entre les deux ;
+consommation faible : mpg > seuil 2 (mpg eleve = consommation faible).
+Repartition (train / test) :
+  elevee   : 107 / 23
+  moyenne  : 103 / 37
+  faible   : 103 / 19
+Comparaison avec des seuils fixes (20 et 30 mpg), sur train :
+  Terciles : 107 / 103 / 103
+  Fixes    : 128 / 112 / 73
+Les terciles equilibrent mieux les groupes ; les seuils fixes
+sont plus simples a interpreter mais moins equilibres ici.
+Les voitures proches des seuils risquent d'etre mal classees.
+
+Comparaison sur le meme jeu de test (C = 2) :
+Modele                    Accuracy   F1 macro
+SVC lineaire maison          0.823      0.827
+Matrice de confusion, ordre elevee / moyenne / faible :
+[[21  2  0]
+ [ 2 27  8]
+ [ 0  2 17]]
+SVC lineaire sklearn         0.823      0.827
+Matrice de confusion, ordre elevee / moyenne / faible :
+[[21  2  0]
+ [ 2 27  8]
+ [ 0  2 17]]
+
+SVC rbf maison               0.785      0.790
+Matrice de confusion, ordre elevee / moyenne / faible :
+[[20  3  0]
+ [ 5 25  7]
+ [ 0  2 17]]
+SVC rbf sklearn              0.785      0.790
+Matrice de confusion, ordre elevee / moyenne / faible :
+[[20  3  0]
+ [ 5 25  7]
+ [ 0  2 17]]
+
+Analyse des erreurs du SVC lineaire (test) :
+  A 2 mpg ou moins d'un seuil : 11 erreurs sur 37 voitures.
+  A plus de 2 mpg des seuils : 3 erreurs sur 42 voitures.
+Les erreurs se concentrent pres des frontieres de classes.
+Sur ce test, le modele lineaire fait mieux que le RBF ;
+un noyau non lineaire n'ameliore donc pas forcement le resultat.
+
+2. REGRESSION SVR LINEAIRE
+---------------------------------------------------------------
+Perte epsilon-insensible : max(0, |mpg - prediction| - epsilon).
+Les erreurs a l'interieur du tube +/- epsilon ne sont pas penalisees.
+C = 1 pour les deux implementations ; meme train et meme test.
+ epsilon     modele      MAE     RMSE       R2   support  dans tube
+     0.1     maison    2.120    2.856    0.840       296         18
+     0.1    sklearn    2.120    2.856    0.840       296         22
+     0.5     maison    2.141    2.890    0.836       255         65
+     0.5    sklearn    2.141    2.890    0.836       255         65
+     1.0     maison    2.124    2.870    0.839       215        104
+     1.0    sklearn    2.124    2.870    0.839       215        104
+     2.0     maison    2.214    2.902    0.835       146        173
+     2.0    sklearn    2.214    2.902    0.835       147        175
+
+Interpretation : quand epsilon augmente, le modele ignore
+davantage de petits ecarts et utilise moins de vecteurs de support.
+En contrepartie, un epsilon trop grand peut reduire la precision.
+Le comptage maison emploie un seuil de 0.01 sur les poids duaux,
+ce qui peut creer de faibles differences avec scikit-learn.
+Les deux implementations donnent ici des performances tres proches.
+
+Test avec bruit : ajout d'un bruit gaussien d'ecart-type 2 mpg
+sur la cible d'entrainement seulement ; test laisse intact.
+ epsilon   RMSE normal   RMSE bruit  support bruit
+     0.1         2.856        2.905            305
+     0.5         2.890        2.918            274
+     1.0         2.870        2.958            236
+     2.0         2.902        2.962            173
+Avec du bruit, l'erreur sur le test augmente legerement ici.
+Un epsilon plus grand ignore davantage de petits ecarts et reduit
+les vecteurs de support, mais n'assure pas un meilleur RMSE.
